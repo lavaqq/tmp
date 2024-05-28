@@ -1,0 +1,90 @@
+<template>
+    
+    <div class="components component-tasks" :class="(loading) ? 'loading' : ''">
+        <Loading />
+
+        <header class="main-data" :style="'background: linear-gradient(45deg, '+color+', '+color+'b8);'">
+            <span class="title">Tâches du jour et en retard</span>
+
+            <ul class="actions">
+                <li><NuxtLink to="/tasks"><span uk-icon="search"></span></NuxtLink></li>
+            </ul>
+        </header>
+
+        <div class="content">
+            <table class="uk-table" v-if="tasks.length > 0">
+                <thead>
+                    <tr>
+                        <th>Résident</th>
+                        <th>Type</th>
+                        <th>Deadline</th>
+                        <th class="right">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr v-for="(task, index) in tasks" :key="index">
+                        <td>
+                            <img v-if="task.resident.picture !== null" :src="$axios.defaults.baseURL + '/storage/residents/pictures/' + task.resident.picture"> 
+                            <img v-else src="~/assets/img/default-resident-picture.png">
+                            {{ task.resident.lastname }} {{ task.resident.firstname }}
+                        </td>
+                        <td>{{ task.task_type.name }}</td>
+                        <td>{{ moment(task.deadline_end).format('HH:mm') }}</td>
+                        <td>
+                            <ul class="actions">
+                                <li><NuxtLink :to="'/tasks/'+task.id"><span uk-icon='search'></span></NuxtLink></li>
+                            </ul>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <span class="no-data" v-else>Aucune tâche</span>
+        </div>
+    </div>
+
+</template>
+
+<script>
+    import moment from 'moment'
+
+    export default {
+        auth: true,
+        layout: 'app',
+        props: ['color'],
+        data() {
+            return {
+                loading: true,
+                tasks: []
+            }
+        },
+        mounted() {
+            this.$axios.get('/api/tasks', {
+                params: {
+                    date_from: moment().format('YYYY-MM-DD 00:00:00'),
+                    mine: true,
+                    status: [0],
+                    establishment_id: ( JSON.parse(localStorage.getItem('establishmentSelected')) !== null && JSON.parse(localStorage.getItem('establishmentSelected')).id != 'all' ) ? JSON.parse(localStorage.getItem('establishmentSelected')).id : ''
+                }
+            })
+            .then(response => {
+                this.tasks = response.data.data.tasks
+                this.loading = false
+            })
+            .catch(error => {
+                UIkit.notification({
+                    message: "<span uk-icon='icon: close'></span> Une erreur est survenue, impossible de récupérer les tâches !",
+                    status: 'danger',
+                    timeout: 5000
+                })
+
+                this.loading = false
+            })
+        },
+        methods: {
+            moment(date) {
+                return moment(date)
+            }
+        }
+    }
+</script>
